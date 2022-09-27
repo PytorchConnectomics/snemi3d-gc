@@ -1,6 +1,7 @@
 FROM python:3.9-slim
 
-
+RUN apt update
+RUN apt install -y git
 
 RUN groupadd -r evaluator && useradd -m --no-log-init -r -g evaluator evaluator
 

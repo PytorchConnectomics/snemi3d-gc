@@ -1,2 +1,4 @@
 evalutils==0.3.1
+numpy==1.22.2
+h5py==3.7.0
 git+https://github.com/zudi-lin/pytorch_connectomics.git@20e8746#egg=connectomics

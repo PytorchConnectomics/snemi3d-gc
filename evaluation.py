@@ -1,60 +1,29 @@
-import SimpleITK
+import os
+import json
+import h5py
 
-from evalutils import ClassificationEvaluation
-from evalutils.io import SimpleITKLoader
-from evalutils.validators import (
-    NumberOfCasesValidator, UniquePathIndicesValidator, UniqueImagesValidator
-)
+from connectomics.utils.evaluate import adapted_rand
+from evalutils.evalutils import DEFAULT_INPUT_PATH, DEFAULT_EVALUATION_OUTPUT_FILE_PATH, DEFAULT_GROUND_TRUTH_PATH
 
 
-class Snemi3d(ClassificationEvaluation):
+class Snemi3d:
     def __init__(self):
-        super().__init__(
-            file_loader=SimpleITKLoader(),
-            validators=(
-                NumberOfCasesValidator(num_cases=2),
-                UniquePathIndicesValidator(),
-                UniqueImagesValidator(),
-            ),
-        )
+        self.input_file = os.path.join(DEFAULT_INPUT_PATH, "test-input.h5")
+        self.output_file = DEFAULT_EVALUATION_OUTPUT_FILE_PATH
+        self.gt_path = os.path.join(DEFAULT_GROUND_TRUTH_PATH, "test-labels.h5")
 
-    def score_case(self, *, idx, case):
-        gt_path = case["path_ground_truth"]
-        pred_path = case["path_prediction"]
+    def load(self):
+        with h5py.File(self.input_file, "r") as f:
+            self.input = f["main"][()]
+        with h5py.File(self.ground_truth_path, "r") as f:
+            self.ground_truth = f["main"][()]
+    def evaluate(self):
+        self.load()
 
-        # Load the images for this case
-        gt = self._file_loader.load_image(gt_path)
-        pred = self._file_loader.load_image(pred_path)
+        metrics = { "adapted_rand_error" : adapted_rand(self.input, self.ground_truth) }
 
-        # Check that they're the right images
-        if (self._file_loader.hash_image(gt) != case["hash_ground_truth"] or
-            self._file_loader.hash_image(pred) != case["hash_prediction"]):
-            raise RuntimeError("Images do not match")
-
-        # Cast to the same type
-        caster = SimpleITK.CastImageFilter()
-        caster.SetOutputPixelType(SimpleITK.sitkUInt8)
-        caster.SetNumberOfThreads(1)
-        gt = caster.Execute(gt)
-        pred = caster.Execute(pred)
-
-        # Score the case
-        overlap_measures = SimpleITK.LabelOverlapMeasuresImageFilter()
-        overlap_measures.SetNumberOfThreads(1)
-        overlap_measures.Execute(gt, pred)
-
-        return {
-            'FalseNegativeError': overlap_measures.GetFalseNegativeError(),
-            'FalsePositiveError': overlap_measures.GetFalsePositiveError(),
-            'MeanOverlap': overlap_measures.GetMeanOverlap(),
-            'UnionOverlap': overlap_measures.GetUnionOverlap(),
-            'VolumeSimilarity': overlap_measures.GetVolumeSimilarity(),
-            'JaccardCoefficient': overlap_measures.GetJaccardCoefficient(),
-            'DiceCoefficient': overlap_measures.GetDiceCoefficient(),
-            'pred_fname': pred_path.name,
-            'gt_fname': gt_path.name,
-        }
-
+        with open(self.output_file, "w") as f:
+            f.write(json.dumps(metrics))
 
 if __name__ == "__main__":
     Snemi3d().evaluate()
