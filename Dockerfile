@@ -20,6 +20,8 @@ RUN python -m pip install --user -U pip
 COPY --chown=evaluator:evaluator ground-truth /opt/evaluation/ground-truth
 
 COPY --chown=evaluator:evaluator requirements.txt /opt/evaluation/
+# since numpy must be installed before PyTorch Connectomics
+RUN python -m pip install --user numpy==1.22.2
 RUN python -m pip install --user -rrequirements.txt
 
 COPY --chown=evaluator:evaluator evaluation.py /opt/evaluation/
