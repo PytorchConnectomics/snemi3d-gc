@@ -1,0 +1,2 @@
+evalutils==0.3.1
+git+https://github.com/zudi-lin/pytorch_connectomics.git@20e8746#egg=connectomics
